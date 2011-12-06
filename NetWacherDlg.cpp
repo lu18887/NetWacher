@@ -14,7 +14,8 @@ using namespace std;
 #endif
 
 volatile BOOL m_bRun;
-
+HANDLE g_hEvent_exit=FALSE;  // 退出Event事件
+HANDLE g_hEvent_update=FALSE; //刷新Event时间
 void ThreadFunc(LPVOID lpParam)
 {
 	PClist* list = (PClist*) lpParam;
@@ -38,8 +39,9 @@ void ThreadFunc(LPVOID lpParam)
 		}
 		
 		::SetDlgItemText(AfxGetApp()->m_pMainWnd->m_hWnd,IDC_EDIT_LIST,temp);
-		Sleep(5000);
+		WaitForSingleObject(g_hEvent_update,INFINITE);
 	}
+	SetEvent(g_hEvent_exit);
 	return;
 }
 
@@ -98,6 +100,9 @@ BEGIN_MESSAGE_MAP(CNetWacherDlg, CDialog)
 	ON_WM_QUERYDRAGICON()
 	//}}AFX_MSG_MAP
 	ON_WM_CLOSE()
+
+	ON_WM_CONTEXTMENU()
+	ON_COMMAND(ID_FILE_TOPMOST, &CNetWacherDlg::OnFileTopmost)
 END_MESSAGE_MAP()
 
 
@@ -124,6 +129,7 @@ BOOL CNetWacherDlg::OnInitDialog()
 			pSysMenu->AppendMenu(MF_STRING, IDM_ABOUTBOX, strAboutMenu);
 		}
 	}
+	ToMost = false;
 
 
 
@@ -134,6 +140,9 @@ BOOL CNetWacherDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
 	// TODO: Add extra initialization here
+	
+	g_hEvent_exit=CreateEvent(NULL,TRUE,FALSE,NULL);
+	g_hEvent_update=CreateEvent(NULL,FALSE,FALSE,NULL);
 
 	hThread=CreateThread(NULL,
 		0,
@@ -141,7 +150,7 @@ BOOL CNetWacherDlg::OnInitDialog()
 		&list,
 		0,
 		&ThreadID);
-
+		StartTimer();
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -202,5 +211,39 @@ void CNetWacherDlg::OnClose()
 {
 	// TODO: Add your message handler code here and/or call default
     m_bRun = false;
+	SetEvent(g_hEvent_update);
+	WaitForSingleObject(g_hEvent_exit,INFINITE);
+	CloseHandle(g_hEvent_exit);
+	CloseHandle(g_hEvent_update);
+	KillTimer(m_timer);
 	CDialog::OnClose();
+}
+
+
+
+
+void CNetWacherDlg::OnContextMenu(CWnd* pWnd, CPoint point)
+{
+	CMenu menu;
+	menu.LoadMenu(IDR_MENU1); //读取资源
+	menu.GetSubMenu(0)->TrackPopupMenu(TPM_LEFTALIGN|TPM_LEFTBUTTON|TPM_RIGHTBUTTON, point.x,point.y, this) ;
+
+	//弹出自定义右键菜单
+	// TODO: Add your message handler code here
+}
+
+void CNetWacherDlg::OnFileTopmost()
+{
+	// TODO: Add your command handler code here
+}
+
+void CNetWacherDlg::OnTimer(UINT_PTR nIDEvent)
+{
+	SetEvent(g_hEvent_update);
+	CDialog::OnTimer(nIDEvent);
+}
+
+void  CNetWacherDlg::StartTimer( UINT ms )
+{
+	m_timer=SetTimer(1,ms,NULL);
 }

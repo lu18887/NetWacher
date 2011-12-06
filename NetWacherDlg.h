@@ -36,10 +36,16 @@ protected:
 
 private:
 	PClist list;
+	bool ToMost;
+	UINT_PTR m_timer;
 
 public:
 	CEdit m_edit_result;
 	HANDLE hThread; 
 	DWORD ThreadID;
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg void OnClose();
+	afx_msg void OnContextMenu(CWnd* /*pWnd*/, CPoint /*point*/);
+	afx_msg void OnFileTopmost();
+	void StartTimer(UINT ms=5000);
 };
