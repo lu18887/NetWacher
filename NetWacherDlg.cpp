@@ -5,6 +5,8 @@
 #include "NetWacher.h"
 #include "NetWacherDlg.h"
 #include <vector>
+#include <atlstr.h>
+
 
 #include "PClist.h"
 using namespace std;
@@ -25,8 +27,13 @@ void ThreadFunc(LPVOID lpParam)
 
 		list->GenList();
 		list->ConvertSpd();
-		CString strTemp="";
-		CString temp="";
+		//Declare a thread-safe, growable, private heap with initial size 0
+		CWin32Heap g_stringHeap( 0, 0, 0 );
+		// Declare a string manager that uses the private heap
+		CAtlStringMgr g_stringMgr( &g_stringHeap ); 
+		CString strTemp(&g_stringMgr);
+		CString temp(&g_stringMgr);
+		
 		for (int i=0;i<list->GetListSize();i++)
 		{
 

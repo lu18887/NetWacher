@@ -1,5 +1,7 @@
 #include "StdAfx.h"
 #include "PClist.h"
+#include <atlstr.h>
+
 
 PClist::PClist(void)
 {
@@ -11,11 +13,18 @@ PClist::~PClist(void)
 
 void PClist::GenList()
 {
+
+	//Declare a thread-safe, growable, private heap with initial size 0
+	CWin32Heap g_stringHeap( 0, 0, 0 );
+	// Declare a string manager that uses the private heap
+	CAtlStringMgr g_stringMgr( &g_stringHeap ); 
+
 	CInternetSession m_InterSession(_T("session"));
 
 	CHttpConnection* pServer = NULL;
 	CHttpFile* pFile = NULL;
-	CString strHtml = "";
+	CString strHtml(&g_stringMgr);
+	
 	CString strAuth = "Authorization: Basic YWRtaW46YWRtaW4=\r\n";
 	CString strUA = "User-Agent: Mozilla/5.0 (Windows NT 6.1) AppleWebKit/535.2 (KHTML, like Gecko) Chrome/15.0.874.121 Safari/535.2\r\n";
 	CString strAccept = "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n";
@@ -39,7 +48,8 @@ void PClist::GenList()
 		pFile->QueryInfoStatusCode(dwRet);
 		
 		bool goon = true;
-		CString stln;
+		CString stln(&g_stringMgr);
+		
 		if (dwRet==HTTP_STATUS_OK)
 		{
 			
@@ -55,7 +65,8 @@ void PClist::GenList()
 				else							//说明是有效行，进行字符串拆分，取IP，MAC，流量字节数
 				{
 					PCNode temp;				//具体格式如：0, "192.168.1.100", "8C-7B-9D-EF-C6-63", 9846, 5620267, 0, 0, 0, 0, 0, 0, 1, 0, 4,最末尾还有个空格
-					CString strTemp="";
+					CString strTemp(&g_stringMgr);
+					
 					int pos = stln.Find('"');
 					stln = stln.Right(stln.GetLength()-pos-1);
 
@@ -98,7 +109,7 @@ void PClist::GenList()
 		
 
 		pFile->Close();
-		
+		delete pFile;
 		
 		//接下来获取MAC对用的PC名字
 
@@ -120,8 +131,8 @@ void PClist::GenList()
 				}
 				else
 				{
-					CString nameTemp="";   //"夜の总会", "00-22-5F-7A-B5-F1", "192.168.1.103", "01:21:29", 
-					CString macTemp = "";
+					CString nameTemp(&g_stringMgr);   //"XXX", "00-22-5F-7A-B5-F1", "192.168.1.103", "01:21:29", 
+					CString macTemp(&g_stringMgr);
 					int pos = stln.Find('"');
 					stln = stln.Right(stln.GetLength()-pos-1);
 
@@ -158,9 +169,10 @@ void PClist::GenList()
 		
 		pServer->Close();
 		pFile->Close();
-		m_InterSession.Close();
+		
 		delete pServer;
 		delete pFile;
+		m_InterSession.Close();
 	}
 	catch (CInternetException* e)
 	{
